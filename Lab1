@@ -1,0 +1,253 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void fill_binary_file(const char* filename) {
+    FILE* fp = fopen(filename, "wb");
+    if (fp == NULL) {
+        perror("Ошибка открытия файла для записи");
+        exit(EXIT_FAILURE);
+    }
+
+    int num;
+    system("chcp 1251");
+    system("cls");
+    printf("Введите целые натуральные числа (для завершения введите 0):\n");
+    while (1) {
+        printf("Введите число: ");
+        scanf("%d", &num);
+        if (num == 0) {
+            break;
+        }
+        if (num < 0) {
+            printf("Пожалуйста, введите натуральное число.\n");
+            continue;
+        }
+        fwrite(&num, sizeof(int), 1, fp);
+    }
+
+    fclose(fp);
+    printf("Файл %s успешно заполнен.\n", filename);
+}
+
+int count_multiples(const char* filename, int divisor) {
+    system("chcp 1251");
+    system("cls");
+    FILE* fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        perror("Ошибка открытия файла для чтения");
+        exit(EXIT_FAILURE);
+    }
+
+    int num, count = 0;
+    while (fread(&num, sizeof(int), 1, fp) == 1) {
+        if (num % divisor == 0) {
+            count++;
+        }
+    }
+
+    fclose(fp);
+    return count;
+}
+
+
+void cyclic_shift(const char* filename, int k) {
+    system("chcp 1251");
+    system("cls");
+    FILE* fp = fopen(filename, "r+b");
+    if (fp == NULL) {
+        perror("Ошибка открытия файла для чтения/записи");
+        exit(EXIT_FAILURE);
+    }
+
+    
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp) / sizeof(int);
+    fseek(fp, 0, SEEK_SET);
+
+    if (file_size <= 0) {
+        printf("Файл пуст или содержит некорректные данные.\n");
+        fclose(fp);
+        return;
+    }
+
+    k = k % file_size;
+    if (k < 0) {
+        k += file_size; 
+    }
+
+    if (k == 0) {
+        fclose(fp);
+        return; 
+    }
+
+    
+    const char* temp_filename = "temp.bin";
+    FILE* temp_fp = fopen(temp_filename, "wb");
+    if (temp_fp == NULL) {
+        perror("Ошибка создания временного файла");
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
+
+
+    fseek(fp, (file_size - k) * sizeof(int), SEEK_SET);
+    int num;
+    for (int i = 0; i < k; ++i) {
+        fread(&num, sizeof(int), 1, fp);
+        fwrite(&num, sizeof(int), 1, temp_fp);
+    }
+
+    
+    fseek(fp, 0, SEEK_SET);
+    for (int i = 0; i < file_size - k; ++i) {
+        fread(&num, sizeof(int), 1, fp);
+        fwrite(&num, sizeof(int), 1, temp_fp);
+    }
+
+    fclose(fp);
+    fclose(temp_fp);
+
+    
+    fp = fopen(filename, "wb"); 
+    temp_fp = fopen(temp_filename, "rb");
+
+    if (fp == NULL || temp_fp == NULL) {
+        perror("Ошибка при открытии файлов для перезаписи");
+        remove(temp_filename); 
+        exit(EXIT_FAILURE);
+    }
+
+    while (fread(&num, sizeof(int), 1, temp_fp) == 1) {
+        fwrite(&num, sizeof(int), 1, fp);
+    }
+
+    fclose(fp);
+    fclose(temp_fp);
+
+    remove(temp_filename); 
+    printf("Циклический сдвиг выполнен.\n");
+}
+
+
+
+void replace_duplicates(const char* filename) {
+    FILE* fp = fopen(filename, "r+b"); 
+    if (fp == NULL) {
+        perror("Ошибка открытия файла для чтения/записи");
+        exit(EXIT_FAILURE);
+    }
+
+    
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp) / sizeof(int);
+    fseek(fp, 0, SEEK_SET);
+
+    if (file_size <= 0) {
+        printf("Файл пуст или содержит некорректные данные.\n");
+        fclose(fp);
+        return;
+    }
+
+    int num, num2;
+    long current_position;
+
+    for (long i = 0; i < file_size; ++i) {
+        current_position = i * sizeof(int); 
+        fseek(fp, current_position, SEEK_SET);
+        fread(&num, sizeof(int), 1, fp);
+
+       
+        for (long j = i + 1; j < file_size; ++j) {
+            fseek(fp, j * sizeof(int), SEEK_SET);
+            fread(&num2, sizeof(int), 1, fp);
+
+            if (num == num2) {
+                
+                fseek(fp, current_position, SEEK_SET);
+                int zero = 0;
+                fwrite(&zero, sizeof(int), 1, fp); 
+
+                fseek(fp, j * sizeof(int), SEEK_SET);
+                fwrite(&zero, sizeof(int), 1, fp);
+            }
+        }
+    }
+
+    fclose(fp);
+    printf("Повторяющиеся элементы заменены на 0.\n");
+}
+
+
+void display_binary_file(const char* filename) {
+    FILE* fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        perror("Ошибка открытия файла для чтения");
+        return;
+    }
+
+    int num;
+    printf("Содержимое файла %s:\n", filename);
+    while (fread(&num, sizeof(int), 1, fp) == 1) {
+        printf("%d ", num);
+    }
+    printf("\n");
+
+    fclose(fp);
+}
+
+
+int main() {
+    const char* filename = "data.bin";
+    int choice;
+    system("chcp 1251");
+    system("cls");
+
+    fill_binary_file(filename);
+    display_binary_file(filename); 
+
+    do {
+        printf("\nВыберите действие:\n");
+        printf("1. Подсчитать количество чисел, кратных заданному\n");
+        printf("2. Выполнить циклический сдвиг элементов вправо\n");
+        printf("3. Заменить повторяющиеся элементы на 0\n");
+        printf("0. Выход\n");
+        printf("Ваш выбор: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+        case 1: {
+            int divisor;
+            system("chcp 1251");
+            system("cls");
+            printf("Введите делитель: ");
+            scanf("%d", &divisor);
+            int count = count_multiples(filename, divisor);
+            printf("Количество чисел, кратных %d: %d\n", divisor, count);
+            break;
+        }
+        case 2: {
+            int k;
+            system("chcp 1251");
+            system("cls");
+            printf("Введите величину сдвига: ");
+            scanf("%d", &k);
+            cyclic_shift(filename, k);
+            display_binary_file(filename); 
+            break;
+        }
+        case 3:
+            replace_duplicates(filename);
+            display_binary_file(filename);
+            break;
+        case 0:
+            printf("Выход из программы.\n");
+            break;
+        default:
+            printf("Неверный выбор. Пожалуйста, повторите.\n");
+        }
+    } while (choice != 0);
+
+    return 0;
+}
