@@ -1,0 +1,148 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_FILE_SIZE 1000
+
+int main() {
+    system("chcp 1251");
+    system("cls");
+    char filename[100];
+    char file_content[MAX_FILE_SIZE];
+    int content_length = 0;
+    FILE* fp;
+    int choice;
+    char input_line[MAX_FILE_SIZE]; 
+
+    printf("Введите имя файла: ");
+    scanf("%99s", filename);
+    getchar(); 
+
+    printf("Введите текст для записи в файл (максимум %d символов, для завершения введите точку ('.') в отдельной строке):\n", MAX_FILE_SIZE - 1);
+
+    content_length = 0;
+    while (content_length < MAX_FILE_SIZE - 1) {
+        if (fgets(input_line, sizeof(input_line), stdin) == NULL) {
+            break; 
+        }
+
+        
+        if (strcmp(input_line, ".\n") == 0) {
+            break;
+        }
+
+        
+        int line_length = strlen(input_line);
+        if (content_length + line_length < MAX_FILE_SIZE) {
+            strncpy(file_content + content_length, input_line, line_length);
+            content_length += line_length;
+        }
+        else {
+            printf("Превышен максимальный размер файла.\n");
+            break;
+        }
+    }
+
+    file_content[content_length] = '\0'; 
+
+    fp = fopen(filename, "w");
+    if (fp == NULL) {
+        perror("Ошибка при открытии файла для записи");
+        return 1;
+    }
+    fprintf(fp, "%s", file_content);
+    fclose(fp);
+
+    printf("\nСодержимое файла:\n%s\n", file_content);
+
+   
+    printf("\nВыберите действие:\n");
+    printf("1. Определить частоту встречаемости символов\n");
+    printf("2. Заменить пробелы на символ\n");
+    printf("Введите номер действия: ");
+
+    if (scanf("%d", &choice) != 1) {
+        fprintf(stderr, "Ошибка: некорректный ввод.\n");
+        return 1;
+    }
+    getchar(); 
+
+    if (choice == 1) {
+        int frequency[256] = { 0 };
+
+        fp = fopen(filename, "r");
+        if (fp == NULL) {
+            perror("Ошибка при открытии файла для чтения");
+            return 1;
+        }
+        content_length = 0; 
+        int c;
+        while ((c = fgetc(fp)) != EOF && content_length < MAX_FILE_SIZE - 1) {
+            file_content[content_length++] = (char)c;
+        }
+        file_content[content_length] = '\0'; 
+        fclose(fp);
+        for (int i = 0; i < content_length; i++) {
+            frequency[(unsigned char)file_content[i]]++;
+        }
+
+        printf("\nЧастота встречаемости символов:\n");
+        for (int i = 0; i < 256; i++) {
+            if (frequency[i] > 0) {
+                printf("Символ '%c' (ASCII %d): %d раз(а)\n", (char)i, i, frequency[i]);
+            }
+        }
+        printf("\nСодержимое файла после подсчета частоты:\n%s\n", file_content);
+
+    }
+    else if (choice == 2) {
+
+        char replace_char;
+        printf("Введите символ для замены пробелов: ");
+        if (scanf("%c", &replace_char) != 1) {
+            fprintf(stderr, "Ошибка: некорректный ввод символа.\n");
+            return 1;
+        }
+        getchar(); 
+
+        fp = fopen(filename, "r");
+        if (fp == NULL) {
+            perror("Ошибка при открытии файла для чтения");
+            return 1;
+        }
+        content_length = 0;
+        int c;
+        while ((c = fgetc(fp)) != EOF && content_length < MAX_FILE_SIZE - 1) {
+            file_content[content_length++] = (char)c;
+        }
+        file_content[content_length] = '\0';
+        fclose(fp);
+
+
+        for (int i = 0; i < content_length; i++) {
+            if (file_content[i] == ' ') {
+                file_content[i] = replace_char;
+            }
+        }
+
+
+        fp = fopen(filename, "w");
+        if (fp == NULL) {
+            perror("Ошибка при открытии файла для записи");
+            return 1;
+        }
+        fprintf(fp, "%s", file_content);
+        fclose(fp);
+
+        printf("\nСодержимое файла после замены пробелов:\n%s\n", file_content);
+
+    }
+    else {
+        printf("Неверный выбор действия.\n");
+        return 1;
+    }
+
+    return 0;
+}
